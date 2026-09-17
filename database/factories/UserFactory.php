@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Enums\Role;
+use App\Enums\Status;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -24,10 +26,18 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
+            'firstName' => substr(fake()->firstName(), 0, 52),
+            'lastName' => substr(fake()->lastName(), 0, 52),
+            'phone' => substr(fake()->unique()->numerify('+959#########'), 0, 15),
+            'email' => substr(fake()->unique()->safeEmail(), 0, 52),
             'password' => static::$password ??= Hash::make('password'),
+            'role' => fake()->randomElement(Role::cases()),
+            'status' => fake()->randomElement(Status::cases()),
+            'last_login' => fake()->optional()->dateTimeBetween('-1 month', 'now'),
+            'error_login_count' => fake()->numberBetween(0, 3),
+            'random_token' => Str::random(32),
+            'last_change_password' => fake()->optional()->dateTimeBetween('-6 months', 'now'),
+            'email_verified_at' => now(),
             'remember_token' => Str::random(10),
         ];
     }
@@ -37,7 +47,7 @@ class UserFactory extends Factory
      */
     public function unverified(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn(array $attributes) => [
             'email_verified_at' => null,
         ]);
     }

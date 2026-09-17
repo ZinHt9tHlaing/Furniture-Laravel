@@ -3,14 +3,20 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+
+use App\Enums\Role;
+use App\Enums\Status;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasUlids;
 
     /**
      * The attributes that are mass assignable.
@@ -18,9 +24,17 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
-        'email',
+        'firstName',
+        'lastName',
+        'phone',
         'password',
+        'email',
+        'role',
+        'status',
+        'last_login',
+        'error_login_count',
+        'random_token',
+        'last_change_password',
     ];
 
     /**
@@ -41,8 +55,23 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
+            'role' => Role::class,
+            'status' => Status::class,
+            'last_login' => 'datetime',
+            'last_change_password' => 'datetime',
+            'error_login_count' => 'integer',
             'password' => 'hashed',
+            'email_verified_at' => 'datetime',
         ];
+    }
+
+    public function posts(): HasMany
+    {
+        return $this->hasMany(Post::class, 'authorId');
+    }
+
+    public function image(): MorphOne
+    {
+        return $this->morphOne(Image::class, 'imageable');
     }
 }
