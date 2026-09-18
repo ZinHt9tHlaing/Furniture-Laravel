@@ -13,10 +13,12 @@ return new class extends Migration
     {
         Schema::create('posts', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->string("title", 255);
+            $table->string('title', 255);
             $table->text("content");
             $table->longText("body");
-            $table->foreignUlid('authorId')->constrained('users', 'id')->cascadeOnDelete()->cascadeOnUpdate();
+            $table->foreignUlid('author_id')->constrained('users', 'id')->cascadeOnDelete();
+            $table->foreignUlid('category_id')->constrained('categories', 'id')->cascadeOnDelete();
+            $table->foreignUlid('type_id')->constrained('types', 'id')->cascadeOnDelete();
             $table->timestamps();
         });
     }

@@ -2,7 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\Category;
 use App\Models\Post;
+use App\Models\Type;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -22,7 +24,9 @@ class PostFactory extends Factory
             'title'     => fake()->sentence(6),
             'content'   => fake()->paragraph(2),
             'body'      => fake()->paragraphs(5, true),
-            'authorId'  => User::factory(),
+            'author_id'  => User::factory(),
+            'category_id' => Category::factory(),
+            'type_id'     => Type::factory(),
         ];
     }
 }

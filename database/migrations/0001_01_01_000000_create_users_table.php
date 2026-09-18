@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\Role;
+use App\Enums\Status;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -18,8 +20,8 @@ return new class extends Migration
             $table->string('phone', 15)->unique();
             $table->string('email', 52)->unique();
             $table->string('password');
-            $table->enum('role', ['USER', 'ADMIN', 'AUTHOR'])->default('USER');
-            $table->enum('status', ['ACTIVE', 'INACTIVE', 'FREEZE'])->default('ACTIVE');
+            $table->string('role')->default(Role::USER->value);
+            $table->string('status')->default(Status::ACTIVE->value);
             $table->timestamp('last_login')->nullable();
             $table->smallInteger('error_login_count')->default(0);
             $table->string('random_token');

@@ -67,11 +67,18 @@ class User extends Authenticatable
 
     public function posts(): HasMany
     {
-        return $this->hasMany(Post::class, 'authorId');
+        return $this->hasMany(Post::class, 'author_id');
     }
 
+    // one to one polymorphic relationship
     public function image(): MorphOne
     {
         return $this->morphOne(Image::class, 'imageable');
+    }
+
+    // one to many relationship with orders
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
     }
 }
