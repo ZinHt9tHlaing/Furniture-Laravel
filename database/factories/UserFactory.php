@@ -28,7 +28,7 @@ class UserFactory extends Factory
         return [
             'firstName' => substr(fake()->firstName(), 0, 52),
             'lastName' => substr(fake()->lastName(), 0, 52),
-            'phone' => substr(fake()->unique()->numerify('+959#########'), 0, 15),
+            'phone' => substr(fake()->unique()->numerify('09#########'), 0, 15),
             'email' => substr(fake()->unique()->safeEmail(), 0, 52),
             'password' => static::$password ??= Hash::make('password'),
             'role' => fake()->randomElement(Role::cases()),

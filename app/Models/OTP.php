@@ -11,6 +11,8 @@ class OTP extends Model
     /** @use HasFactory<\Database\Factories\OTPFactory> */
     use HasFactory, HasUlids;
 
+    protected $table = 'otps';
+
     protected $fillable = [
         'phone',
         'otp',
