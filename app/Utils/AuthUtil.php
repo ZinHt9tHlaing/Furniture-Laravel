@@ -4,6 +4,7 @@ namespace App\Utils;
 
 use App\Enums\ErrorCode;
 use App\Exceptions\ApiException;
+use App\Models\OTP;
 use App\Models\User;
 
 class AuthUtil
@@ -27,6 +28,28 @@ class AuthUtil
                 "OTP is wrong for 5 times. Please try again tomorrow.",
                 401,
                 ErrorCode::OverLimit
+            );
+        }
+    }
+
+    public static function checkOtpIfNotExist(?OTP $otpRow)
+    {
+        if (!$otpRow) {
+            throw new ApiException(
+                "Phone number is incorrect.",
+                400, // Bad request
+                ErrorCode::Invalid
+            );
+        }
+    }
+
+    public static function checkUserIfNotExist(?User $user)
+    {
+        if (!$user) {
+            throw new ApiException(
+                "This phone has not registered.",
+                401,
+                ErrorCode::Unauthenticated
             );
         }
     }

@@ -6,6 +6,7 @@ use App\Enums\ErrorCode;
 use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\Auth\VerifyOtpRequest;
 use App\Models\User;
 use App\Services\Auth\AuthService;
 use App\Utils\AuthUtil;
@@ -63,6 +64,7 @@ class AuthController extends Controller
                 $lastOtpRequestDate = Carbon::parse($otpRow->updated_at);
                 $today = Carbon::now();
 
+                // Check if the user has made 5 wrong OTP verification attempts in the same day
                 $isSameDate = $lastOtpRequestDate->isSameDay($today);
                 AuthUtil::checkOtpErrorIfSameDate($isSameDate, $otpRow->error);
 
@@ -103,6 +105,102 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error while registering user: ',
+                'error_code' => ErrorCode::InternalError->value,
+            ], 500);
+        }
+    }
+
+    /**
+     * Verify user OTP
+     * The phone number and token will be automatically provided by the system.
+     * If more than two minutes have passed since the register API was called, OTP verification is considered expired.
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function verifyOtp(VerifyOtpRequest $request): JsonResponse
+    {
+        try {
+            ['phone' => $phone, 'otp' => $otp, 'token' => $token] = $request->validated();
+
+            $user = AuthService::getUserByPhone($phone);
+            AuthUtil::checkUserExists($user);
+
+            $otpRow = AuthService::getOtpByPhone($phone);
+            AuthUtil::checkOtpIfNotExist($otpRow);
+
+            $isSameDate = Carbon::parse($otpRow->updated_at)->isSameDay(Carbon::now());
+            AuthUtil::checkOtpErrorIfSameDate($isSameDate, $otpRow->error);
+
+            // Token is wrong, may be under attack
+            if ($otpRow->remember_token !== $token) {
+                $optData = [
+                    "error" => 5
+                ];
+                AuthService::updateOtp($otpRow->id, $optData);
+
+                throw new ApiException(
+                    "Invalid token.",
+                    400, // Bad request
+                    ErrorCode::Invalid
+                );
+            }
+
+            // OTP is expired after more than 2 minutes
+            /** @var Carbon $updatedAt */
+            $updatedAt = $otpRow->updated_at;
+            $isOtpExpired = $updatedAt->addMinutes(2)->isPast();
+            if ($isOtpExpired) {
+                throw new ApiException(
+                    "OTP is expired.",
+                    403,
+                    ErrorCode::OtpExpired
+                );
+            }
+
+            // OTP is wrong
+            $isMatchOTP  = Hash::check($otp, $otpRow->otp);
+            if (!$isMatchOTP) {
+                // If OTP error is first time today
+                if (!$isSameDate) {
+                    $optData = [
+                        "error" => 1
+                    ];
+                    AuthService::updateOtp($otpRow->id, $optData);
+                } else {
+                    // If OTP error is not first time today
+                    $optData = [
+                        "error" => $otpRow->error + 1
+                    ];
+                    AuthService::updateOtp($otpRow->id, $optData);
+
+                    throw new ApiException(
+                        "OTP is incorrect.",
+                        401,
+                        ErrorCode::Invalid
+                    );
+                }
+            }
+
+            // All are OK
+            $verifyToken = TokenUtil::generateToken();
+            $optData = [
+                'verify_token' => $verifyToken,
+                'count' => 1,
+                'error' => 0,
+            ];
+
+            $result = AuthService::updateOtp($otpRow->id, $optData);
+
+            return response()->json([
+                'message'      => "OTP is successfully verified.",
+                'phone'        => $result->phone,
+                'token'          => $result->verify_token,
+            ], 201);
+        } catch (ApiException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error while verifying OTP: ',
                 'error_code' => ErrorCode::InternalError->value,
             ], 500);
         }
