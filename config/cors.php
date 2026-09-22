@@ -65,6 +65,6 @@ return [
     | Required for Sanctum SPA cookie-based auth. Keep false when using
     | token-based auth with 'allowed_origins' => ['*'].
     */
-    'supports_credentials' => false,
+    'supports_credentials' => true,
 
 ];

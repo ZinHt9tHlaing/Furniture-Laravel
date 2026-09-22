@@ -8,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class LoginRequest extends FormRequest
+class ConfirmPasswordRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -28,6 +28,7 @@ class LoginRequest extends FormRequest
         return [
             'phone'    => ['required', 'string', 'max:15', 'regex:/^[0-9]+$/', 'between:5,12'],
             'password'   => ['required', 'string', 'min:6'],
+            'token' => ['required', 'string'],
         ];
     }
 
@@ -39,6 +40,7 @@ class LoginRequest extends FormRequest
             'phone.regex' => 'Phone must be numbers only.',
             'password.required' => 'Invalid password.',
             'password.min' => 'Password must be at least 6 characters.',
+            'token.*' => 'Invalid token',
         ];
     }
 

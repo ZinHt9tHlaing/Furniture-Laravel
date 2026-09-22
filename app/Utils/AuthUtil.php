@@ -13,7 +13,7 @@ class AuthUtil
     {
         if ($user) {
             throw new ApiException(
-                "This phone number has already been registered.",
+                "This user has already been registered.",
                 409,
                 ErrorCode::UserExist
             );
@@ -47,7 +47,7 @@ class AuthUtil
     {
         if (!$user) {
             throw new ApiException(
-                "This phone has not registered.",
+                "This phone number has not registered yet.",
                 401,
                 ErrorCode::Unauthenticated
             );

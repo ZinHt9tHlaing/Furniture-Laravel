@@ -12,6 +12,11 @@ class AuthService
         return User::where('phone', $phone)->first();
     }
 
+    public static function getUserByEmail(string $email): ?User
+    {
+        return User::where('email', $email)->first();
+    }
+
     public static function createOtp(array $optData): ?OTP
     {
         return OTP::create($optData);
@@ -29,5 +34,19 @@ class AuthService
             $otp->update($otpData);
         }
         return $otp;
+    }
+
+    public static function createUser(array $userData): User
+    {
+        return User::create($userData);
+    }
+
+    public static function updateUser(string|int $id, array $userData): ?User
+    {
+        $user = User::find($id);
+        if ($user) {
+            $user->update($userData);
+        }
+        return $user;
     }
 }

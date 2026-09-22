@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'custom_secret_key' => [
+        'access_token_secret' => env('ACCESS_TOKEN_SECRET'),
+        'refresh_token_secret' => env('REFRESH_TOKEN_SECRET'),
+    ]
+
 ];

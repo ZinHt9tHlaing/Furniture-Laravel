@@ -15,10 +15,10 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->string('firstName', 52);
-            $table->string('lastName', 52);
+            $table->string('firstName', 52)->nullable();
+            $table->string('lastName', 52)->nullable();
             $table->string('phone', 15)->unique();
-            $table->string('email', 52)->unique();
+            $table->string('email', 52)->unique()->nullable();
             $table->string('password');
             $table->string('role')->default(Role::USER->value);
             $table->string('status')->default(Status::ACTIVE->value);

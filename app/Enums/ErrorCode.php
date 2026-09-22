@@ -5,6 +5,7 @@ namespace App\Enums;
 enum ErrorCode: string
 {
     case Invalid            = 'Error_Invalid';
+    case BadRequest         = 'Error_BadRequest';
     case Unauthenticated    = 'Error_Unauthenticated';
     case Attack             = 'Error_Attack';
     case AccessTokenExpired = 'Error_AccessTokenExpired';
