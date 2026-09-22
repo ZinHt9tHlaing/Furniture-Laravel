@@ -12,6 +12,11 @@ class AuthService
         return User::where('phone', $phone)->first();
     }
 
+    public static function getUserById(string|int $id): ?User
+    {
+        return User::find($id);
+    }
+
     public static function getUserByEmail(string $email): ?User
     {
         return User::where('email', $email)->first();

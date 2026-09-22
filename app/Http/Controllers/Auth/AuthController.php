@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -423,8 +424,9 @@ class AuthController extends Controller
             $refreshCookie = TokenUtil::createAuthCookie('refreshToken', $tokens['refresh_token'], 30 * 24 * 60);
 
             return response()->json([
-                'message' => 'Successfully Logged In.',
-                'userId'  => $user->id,
+                'message'      => 'Successfully Logged In.',
+                'userId'       => $user->id,
+                'token' => $tokens['access_token'],
             ], 200)
                 ->withCookie($accessCookie)
                 ->withCookie($refreshCookie);
@@ -441,10 +443,57 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        try {
+            $refreshToken = $request->hasCookie("refreshToken") ? $request->cookie("refreshToken") : null;
+            if (!$refreshToken) {
+                throw new ApiException(
+                    "You are not an authenticated user.",
+                    401,
+                    ErrorCode::Unauthenticated
+                );
+            }
 
-        return response()->json([
-            'message' => 'Logged out successfully.',
-        ]);
+            $tokenModel = PersonalAccessToken::findToken($refreshToken);
+            if (!$tokenModel) {
+                throw new ApiException(
+                    "You are not an authenticated user.",
+                    401,
+                    ErrorCode::Unauthenticated
+                );
+            }
+
+            $tokenOwner = $tokenModel->tokenable; // User Model Object
+
+            $user = AuthService::getUserById($tokenOwner->id);
+            AuthUtil::checkUserIfNotExist($user);
+
+            if ($user->phone !== $tokenOwner->phone) {
+                throw new ApiException(
+                    "You are not an authenticated user.",
+                    401,
+                    ErrorCode::Unauthenticated
+                );
+            }
+
+            // To ensure the random_token cannot be reused after logging out.
+            $userData = [
+                'random_token' => TokenUtil::generateToken(),
+            ];
+            AuthService::updateUser($user->id, $userData);
+
+            return response()->json([
+                'message' => 'Successfully Logged out.',
+            ], 200)
+                ->withoutCookie('accessToken')
+                ->withoutCookie('refreshToken');
+        } catch (ApiException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            return response()->json([
+                'error'      => 'Error while logging out user: ',
+                'message'    => $e->getMessage(),
+                'error_code' => ErrorCode::InternalError->value,
+            ], 500);
+        }
     }
 }
