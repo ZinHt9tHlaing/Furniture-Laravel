@@ -8,6 +8,7 @@ enum ErrorCode: string
     case BadRequest         = 'Error_BadRequest';
     case Unauthenticated    = 'Error_Unauthenticated';
     case Attack             = 'Error_Attack';
+    case TokenExpired       = 'Error_TokenExpired';
     case AccessTokenExpired = 'Error_AccessTokenExpired';
     case UserExist          = 'Error_UserAlreadyExist';
     case OverLimit          = 'Error_OverLimit';

@@ -30,7 +30,12 @@ Route::prefix("v1")->group(function () {
 
     // Protected Routes (Authenticated)
     Route::middleware(['auth.cookie'])->group(function () {
-        Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+        Route::controller(AuthController::class)->group(function () {
+            Route::post('/logout', 'logout')->name('logout');
+
+            // Refresh Token Rotation
+            Route::post('/refresh-token', 'setRefreshToken')->name('refresh-token');
+        });
 
         // User Management
         Route::controller(UserController::class)->prefix('admin')->name('admin.')->group(function () {
