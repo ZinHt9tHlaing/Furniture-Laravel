@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\Auth\AttachTokenFromCookie;
+use App\Http\Middleware\Auth\AuthorizeMiddleware;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Application;
@@ -31,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // custom middleware
         $middleware->alias([
             'auth.cookie' => AttachTokenFromCookie::class,
+            'authorize' => AuthorizeMiddleware::class,
         ]);
 
         // Prepend CORS middleware so OPTIONS pre-flight requests are handled

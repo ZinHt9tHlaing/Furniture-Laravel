@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\AuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -37,9 +36,11 @@ Route::prefix("v1")->group(function () {
             Route::post('/refresh-token', 'setRefreshToken')->name('refresh-token');
         });
 
-        // User Management
-        Route::controller(UserController::class)->prefix('admin')->name('admin.')->group(function () {
-            Route::get('/users', 'getAllUsers')->name('users');
-        });
+
+        // auth admin route
+        require_once __DIR__ . "/auth/admin_api.php";
+
+        // auth profile route
+        require_once __DIR__ . "/auth/profile_api.php";
     });
 });
