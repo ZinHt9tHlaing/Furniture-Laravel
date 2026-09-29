@@ -29,8 +29,8 @@ class AuthorizeMiddleware
 
         AuthUtil::checkUserIfNotExist($user);
 
-        // 'true' => allow list, 'false' => block list
-        $allowed = $permission === 'true';
+        // Allowed if true, blocked if false
+        $allowed = $permission;
         // Check if user has role
         $hasRole = in_array($user->role->value ?? $user->role, $roles);
 
