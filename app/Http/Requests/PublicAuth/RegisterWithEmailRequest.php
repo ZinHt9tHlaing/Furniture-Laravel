@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Auth;
+namespace App\Http\Requests\PublicAuth;
 
 use App\Enums\ErrorCode;
 use Illuminate\Contracts\Validation\ValidationRule;
