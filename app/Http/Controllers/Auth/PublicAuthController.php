@@ -6,8 +6,10 @@ use App\Enums\ErrorCode;
 use App\Enums\Status;
 use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\PublicAuth\RegisterRequest;
 use App\Http\Requests\PublicAuth\ConfirmPasswordRequest;
+use App\Http\Requests\PublicAuth\ForgotPassword\ForgotPasswordRequest;
+use App\Http\Requests\PublicAuth\ForgotPassword\ResetPasswordRequest;
+use App\Http\Requests\PublicAuth\RegisterRequest;
 use App\Http\Requests\PublicAuth\LoginRequest;
 use App\Http\Requests\PublicAuth\RegisterWithEmailRequest;
 use App\Http\Requests\PublicAuth\VerifyOtpRequest;
@@ -17,7 +19,6 @@ use App\Utils\TokenUtil;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -609,6 +610,263 @@ class PublicAuthController extends Controller
             return response()->json([
                 'error'      => 'Error while refreshing token: ',
                 'message'    => $e->getMessage(),
+                'error_code' => ErrorCode::InternalError->value,
+            ], 500);
+        }
+    }
+
+    public function forgotPassword(ForgotPasswordRequest $request)
+    {
+        try {
+            $validated = $request->validated();
+
+            $phone = $validated['phone'];
+            if (Str::startsWith($phone, "09")) {
+                $phone = Str::after($phone, '09'); // Remove "09"
+            }
+
+            $user = AuthService::getUserByPhone($phone);
+            AuthUtil::checkUserIfNotExist($user);
+
+            $otp = 123456; // For testing
+            // $otp = TokenUtil::generateOtp(); // for production
+
+            $hashedOtp = Hash::make($otp);
+            $token = TokenUtil::generateToken();
+
+            $otpRow = AuthService::getOtpByPhone($phone);
+
+            $result = null;
+
+            if (!$otpRow) {
+                $otpData = [
+                    "phone" => $phone,
+                    "otp" => $hashedOtp,
+                    "remember_token" => $token,
+                    "count" => 1,
+                ];
+
+                $result = AuthService::createOtp($otpData);
+            } else {
+                // Check if it is the same day
+                $lastOtpRequest = Carbon::parse($otpRow->updated_at);
+                $today = Carbon::now();
+                $isSameDate = $lastOtpRequest->isSameDay($today);
+                AuthUtil::checkOtpErrorIfSameDate($isSameDate, $otpRow->error);
+
+                if (!$isSameDate) {
+                    $otpData = [
+                        "otp" => $hashedOtp,
+                        "remember_token" => $token,
+                        "count" => 1,
+                        "error" => 0
+                    ];
+                    $result = AuthService::updateOtp($otpRow->id, $otpData);
+                } else {
+                    if ($otpRow->count === 3) {
+                        throw new ApiException(
+                            "OTP is allowed to request 3 times per day.",
+                            405,
+                            ErrorCode::OverLimit
+                        );
+                    } else {
+                        $otpData = [
+                            "otp" => $hashedOtp,
+                            "remember_token" => $token,
+                            "count" => $otpRow->count + 1,
+                        ];
+                        $result = AuthService::updateOtp($otpRow->id, $otpData);
+                    }
+                }
+            }
+
+            return response()->json([
+                'message'      => "OTP has been sent to 09{$result->phone} to reset password",
+                'phone'        => $result->phone,
+                'token'          => $result->remember_token,
+            ], 201);
+        } catch (ApiException $e) {
+            throw $e; // run render method of ApiException automatically
+        } catch (\Exception $e) {
+            Log::error('Error while sending OTP in forgotPassword: ' . $e->getMessage(), [
+                'exception' => $e,
+            ]);
+
+            return response()->json([
+                'message' => 'Error while sending OTP',
+                'error_code' => ErrorCode::InternalError->value,
+            ], 500);
+        }
+    }
+
+    public function verifyOtpForPassword(VerifyOtpRequest $request)
+    {
+        try {
+            ['phone' => $phone, 'otp' => $otp, 'token' => $token] = $request->validated();
+
+            if (Str::startsWith($phone, "09")) {
+                $phone = Str::after($phone, '09');
+            }
+
+            $user = AuthService::getUserByPhone($phone);
+            AuthUtil::checkUserIfNotExist($user);
+
+            $otpRow = AuthService::getOtpByPhone($phone);
+            AuthUtil::checkOtpIfNotExist($otpRow);
+
+            $isSameDate = Carbon::parse($otpRow->updated_at)->isSameDay(Carbon::now());
+            AuthUtil::checkOtpErrorIfSameDate($isSameDate, $otpRow->error);
+
+            // Token is wrong
+            if ($otpRow->remember_token !== $token) {
+                $otpData = [
+                    "error" => 5
+                ];
+                AuthService::updateOtp($otpRow->id, $otpData);
+
+                throw new ApiException(
+                    "Invalid Token",
+                    400,
+                    ErrorCode::Invalid
+                );
+            }
+
+            // OTP is expired after more than 2 minutes
+            /** @var Carbon $updatedAt */
+            $updatedAt = $otpRow->updated_at;
+            $isOtpExpired = $updatedAt->addMinutes(2)->isPast();
+            if ($isOtpExpired) {
+                throw new ApiException(
+                    "OTP is expired.",
+                    403,
+                    ErrorCode::OtpExpired
+                );
+            }
+
+            // OTP is wrong
+            $isMatchOTP  = Hash::check($otp, $otpRow->otp);
+            if (!$isMatchOTP) {
+                // If OTP error is first time today
+                if (!$isSameDate) {
+                    $optData = [
+                        "error" => 1
+                    ];
+                    AuthService::updateOtp($otpRow->id, $optData);
+                } else {
+                    // If OTP error is not first time today
+                    $optData = [
+                        "error" => $otpRow->error + 1
+                    ];
+                    AuthService::updateOtp($otpRow->id, $optData);
+
+                    throw new ApiException(
+                        "OTP is incorrect.",
+                        401,
+                        ErrorCode::Invalid
+                    );
+                }
+            }
+
+            // Generate new token for this request
+            $verifyToken = TokenUtil::generateToken();
+
+            $otpData = [
+                'verify_token' => $verifyToken,
+                "error" => 0,
+                "count" => 1
+            ];
+            $result = AuthService::updateOtp($otpRow->id, $otpData);
+
+            return response()->json([
+                'message' => 'OTP is successfully verified to reset password.',
+                'phone'   => $result->phone,
+                'token'   => $result->verify_token
+            ]);
+        } catch (ApiException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error while verifying OTP: ',
+                'error_code' => ErrorCode::InternalError->value,
+            ], 500);
+        }
+    }
+
+
+    public function resetPassword(ResetPasswordRequest $request)
+    {
+        try {
+            ['phone' => $phone, 'password' => $password, 'token' => $token] = $request->validated();
+
+            if (Str::startsWith($phone, "09")) {
+                $phone = Str::after($phone, '09');
+            }
+
+            $user = AuthService::getUserByPhone($phone);
+            AuthUtil::checkUserIfNotExist($user);
+
+            $otpRow = AuthService::getOtpByPhone($phone);
+            AuthUtil::checkOtpIfNotExist($otpRow);
+
+            if ($otpRow->error === 5) {
+                throw new ApiException(
+                    "This request may be an attack. if not, try again tomorrow.",
+                    401,
+                    ErrorCode::Attack
+                );
+            }
+
+            if ($otpRow->verify_token !== $token) {
+                $optData = [
+                    "error" => 5
+                ];
+                AuthService::updateOtp($otpRow->id, $optData);
+
+                throw new ApiException(
+                    "Token is invalid.",
+                    400, // Bad request
+                    ErrorCode::Invalid
+                );
+            }
+
+            // OTP is expired after more than 2 minutes
+            /** @var Carbon $updatedAt */
+            $updatedAt = $otpRow->updated_at;
+            $isOtpExpired = $updatedAt->addMinutes(2)->isPast();
+            if ($isOtpExpired) {
+                throw new ApiException(
+                    "OTP is expired.",
+                    403,
+                    ErrorCode::OtpExpired
+                );
+            }
+
+            $hashedPassword = Hash::make($password);
+
+            // Generate Access Token & Refresh Token
+            $tokens = TokenUtil::generateAuthTokens($user);
+
+            // create cookies
+            $accessCookie = TokenUtil::createAuthCookie('accessToken', $tokens['access_token'], 15); // 15 Minutes
+            $refreshCookie = TokenUtil::createAuthCookie('refreshToken', $tokens['refresh_token'], 30 * 24 * 60); // 30 days
+
+            // Update random_token with refresh token
+            AuthService::updateUser($user->id, [
+                "password" => $hashedPassword,
+                'random_token' => $tokens['refresh_token']
+            ]);
+
+            return response()->json([
+                'message' => 'Successfully reset your password.',
+                "userId" => $user->id,
+            ], 201)
+                ->withCookie($accessCookie)
+                ->withCookie($refreshCookie);
+        } catch (ApiException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error while reset password: ',
                 'error_code' => ErrorCode::InternalError->value,
             ], 500);
         }

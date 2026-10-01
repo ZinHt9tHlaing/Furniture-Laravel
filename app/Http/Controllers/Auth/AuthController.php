@@ -169,7 +169,7 @@ class AuthController extends Controller
                 $newAccessCookie  = TokenUtil::createAuthCookie('accessToken', $tokens['access_token'], 15); // 15 minutes
                 $newRefreshCookie = TokenUtil::createAuthCookie('refreshToken', $tokens['refresh_token'], 30 * 24 * 60); // 30 days
 
-               return response()->json([
+                return response()->json([
                     'message'      => 'Token refreshed successfully.',
                     'access_token' => $tokens['access_token'],
                 ], 200)
@@ -186,12 +186,4 @@ class AuthController extends Controller
             ], 500);
         }
     }
-
-    public function forgotPassword(Request $request){}
-
-    public function verifyOtpForPassword(Request $request){}
-
-
-    public function resetPassword(Request $request){}
-
 }
