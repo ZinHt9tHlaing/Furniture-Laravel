@@ -70,6 +70,8 @@ class AttachTokenFromCookie
 
         // Set user id to request
         $request->attributes->set('userId', $user->id);
+        auth()->guard()->setUser($user);
+        $request->setUserResolver(fn () => $user);
 
         return $next($request);
     }

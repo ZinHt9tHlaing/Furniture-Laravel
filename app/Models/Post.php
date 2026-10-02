@@ -34,19 +34,5 @@ class Post extends Model
         return $this->morphMany(Image::class, 'imageable')->orderBy('order');
     }
 
-    public function category(): BelongsTo
-    {
-        return $this->belongsTo(Category::class, 'category_id');
-    }
 
-    public function type(): BelongsTo
-    {
-        return $this->belongsTo(Type::class, 'type_id');
-    }
-
-    // many to many polymorphic relationship with tags
-    public function tags(): MorphToMany
-    {
-        return $this->morphToMany(Tag::class, 'taggable');
-    }
 }

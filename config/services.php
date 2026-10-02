@@ -38,6 +38,13 @@ return [
     'custom_secret_key' => [
         'access_token_secret' => env('ACCESS_TOKEN_SECRET'),
         'refresh_token_secret' => env('REFRESH_TOKEN_SECRET'),
-    ]
+    ],
+
+    'cloudinary' => [
+        'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+        'api_key' => env('CLOUDINARY_KEY'),
+        'api_secret' => env('CLOUDINARY_SECRET'),
+        // 'folder' => env('CLOUDINARY_FOLDER', 'uploads'),
+    ],
 
 ];
