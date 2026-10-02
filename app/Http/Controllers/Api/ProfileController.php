@@ -77,4 +77,31 @@ class ProfileController extends Controller
             ], 500);
         }
     }
+
+    public function getMyPhoto(Request $request)
+    {
+        try {
+            $userId = $request->attributes->get('userId');
+            $user = $request->user() ?: AuthService::getUserById($userId);
+
+            AuthUtil::checkUserIfNotExist($user);
+
+            return response()->json([
+                "message" => "Successfully got my photo",
+                "image_url" => $user?->image?->image_url,
+                "public_id" => $user?->image?->public_id,
+            ], 200);
+        } catch (ApiException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            Log::error("Error while getting my photo: " . $e->getMessage(), [
+                'exception' => $e,
+            ]);
+
+            return response()->json([
+                "message" => "Error while getting my photo",
+                "error_code" => ErrorCode::InternalError->value,
+            ], 500);
+        }
+    }
 }
