@@ -86,6 +86,12 @@ php artisan db:seed --class=AdminSeeder
 php artisan serve
 ```
 
+8. Run the queue worker for profile image uploads:
+
+```bash
+php artisan queue:work database --queue=profile
+```
+
 ---
 
 ## 🔐 API Authentication
