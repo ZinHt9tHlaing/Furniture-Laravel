@@ -105,7 +105,7 @@ class PublicAuthController extends Controller
                 'message'      => "OTP has been sent to 09{$result->phone}",
                 'phone'        => $result->phone,
                 'token'          => $result->remember_token,
-            ], 201);
+            ], 200);
         } catch (ApiException $e) {
             throw $e; // run render method of ApiException automatically
         } catch (\Exception $e) {
@@ -201,7 +201,7 @@ class PublicAuthController extends Controller
                 'message'      => "OTP is successfully verified.",
                 'phone'        => $result->phone,
                 'token'          => $result->verify_token,
-            ], 201);
+            ], 200);
         } catch (ApiException $e) {
             throw $e;
         } catch (\Exception $e) {

@@ -186,4 +186,33 @@ class AuthController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Authenticated User Data Check
+     */
+    public function authCheck(Request $request)
+    {
+        try {
+            $userId = $request->attributes->get('userId');
+            $user = $request->user() ?: AuthService::getUserById($userId);
+
+            AuthUtil::checkUserIfNotExist($user);
+
+            $fullName = $user->firstName . ' ' . $user->lastName;
+
+            return response()->json([
+                'message'       => 'You are an authenticated user.',
+                "userId" => $user->id,
+                "fullName" => $fullName,
+            ], 200);
+        } catch (ApiException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            return response()->json([
+                'error'      => 'Error while fetching all users ',
+                'message'    => $e->getMessage(),
+                'error_code' => ErrorCode::InternalError->value,
+            ], 500);
+        }
+    }
 }

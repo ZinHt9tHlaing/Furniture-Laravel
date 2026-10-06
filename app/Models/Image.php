@@ -12,6 +12,8 @@ class Image extends Model
     /** @use HasFactory<\Database\Factories\ImageFactory> */
     use HasFactory, HasUlids;
 
+    protected $guarded = ['id'];
+
     protected $fillable = ['image_url', 'public_id', 'order'];
 
     /**

@@ -41,23 +41,13 @@ class AttachTokenFromCookie
 
         if (!$accessToken) {
             return $this->generateNewTokens($request, $next, $refreshToken);
-            //  return response()->json([
-            //     'message' => 'Access Token has expired.',
-            //     'error_code' => ErrorCode::AccessTokenExpired
-            // ], 401);
         }
 
         // Verify access token
         $tokenModel = PersonalAccessToken::findToken($accessToken);
-        if (!$tokenModel) {
-            return $this->unauthenticatedResponse('You are not an authenticated user.');
-        }
-
-        if ($tokenModel->expires_at && $tokenModel->expires_at->isPast()) {
-            return response()->json([
-                'message'    => 'Access token is expired.',
-                'error_code' => ErrorCode::AccessTokenExpired,
-            ], 401);
+        if (!$tokenModel || ($tokenModel->expires_at && $tokenModel->expires_at->isPast())) {
+            // Access token is missing, invalid or expired: transparently refresh using refresh token
+            return $this->generateNewTokens($request, $next, $refreshToken);
         }
 
         $user = $tokenModel->tokenable; // User Model Object
@@ -81,17 +71,31 @@ class AttachTokenFromCookie
      */
     protected function generateNewTokens(Request $request, Closure $next, string $refreshToken): Response
     {
+        $tokenModel = PersonalAccessToken::findToken($refreshToken);
+        if (!$tokenModel || ($tokenModel->expires_at && $tokenModel->expires_at->isPast())) {
+            return $this->unauthenticatedResponse('You are not an authenticated user.');
+        }
+
         $user = User::where('random_token', $refreshToken)->first();
 
         if (!$user) {
             return $this->unauthenticatedResponse('You are not an authenticated user.');
         }
 
+        // Revoke the old refresh token from Sanctum
+        $tokenModel->delete();
+
         $tokens = TokenUtil::generateAuthTokens($user);
+
+        // Update random_token in database so subsequent requests and rotations succeed
+        $user->update([
+            'random_token' => $tokens['refresh_token'],
+        ]);
 
         // Bind user to request pipeline
         $request->attributes->set('userId', $user->id);
         auth()->guard()->setUser($user);
+        $request->setUserResolver(fn () => $user);
 
         $response = $next($request);
 

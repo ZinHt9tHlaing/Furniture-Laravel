@@ -24,10 +24,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         // Except access Token and refresh Token cookies from encryption
-        // $middleware->encryptCookies(except: [
-        //     'accessToken',
-        //     'refreshToken',
-        // ]);
+        // can call with localhost instead of 127.0.0.1
+        EncryptCookies::except([
+            'accessToken',
+            'refreshToken',
+        ]);
 
         // custom middleware
         $middleware->alias([

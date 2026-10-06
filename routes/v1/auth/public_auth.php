@@ -15,9 +15,7 @@ Route::controller(PublicAuthController::class)->group(function () {
     Route::post('/login', 'login')->name('login');
 
     // forgot password
-    Route::controller(PublicAuthController::class)->group(function () {
-        Route::post('/forgot-password', 'forgotPassword')->name('forgot-password');
-        Route::post('/verify-otp-for-password', 'verifyOtpForPassword')->name('verify-otp-for-password');
-        Route::post('/reset-password', 'resetPassword')->name('reset-password');
-    });
+    Route::post('/forgot-password', 'forgotPassword')->name('forgot-password');
+    Route::post('/verify-otp-for-password', 'verifyOtpForPassword')->name('verify-otp-for-password');
+    Route::post('/reset-password', 'resetPassword')->name('reset-password');
 });

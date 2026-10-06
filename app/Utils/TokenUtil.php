@@ -72,7 +72,9 @@ class TokenUtil
     {
         // Check if the app is running in production
         $isProduction = app()->isProduction();
-        $sameSite     = $isProduction ? 'none' : 'strict';
+        // In local development, 'lax' is required so cookies are sent on same-site cross-origin requests.
+        // 'strict' completely blocks cookies from frontend (e.g. localhost:5173 -> localhost:8000).
+        $sameSite = $isProduction ? 'none' : 'lax';
 
         return cookie(
             name: $name, // cookie name
