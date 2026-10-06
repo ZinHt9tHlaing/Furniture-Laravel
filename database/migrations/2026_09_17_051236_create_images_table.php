@@ -14,8 +14,8 @@ return new class extends Migration
         // for polymorphic relationship
         Schema::create('images', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->string('image_url');
-            $table->string('public_id');
+            $table->string('image_url')->nullable();
+            $table->string('public_id')->nullable();
 
             // auto create imageable_type and imageable_id columns in the database
             $table->ulidMorphs('imageable');

@@ -6,6 +6,9 @@ namespace App\Models;
 
 use App\Enums\Role;
 use App\Enums\Status;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasName;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,7 +17,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser, HasName
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasUlids, HasApiTokens;
@@ -64,6 +67,19 @@ class User extends Authenticatable
             'password' => 'hashed',
             'email_verified_at' => 'datetime',
         ];
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->role === Role::ADMIN || Role::AUTHOR && $this->status === Status::ACTIVE;
+    }
+
+    // used by Filament to display the authenticated user's name
+    public function getFilamentName(): string
+    {
+        $name = trim("{$this->firstName} {$this->lastName}");
+
+        return $name !== '' ? $name : (string) $this->email;
     }
 
     public function posts(): HasMany
