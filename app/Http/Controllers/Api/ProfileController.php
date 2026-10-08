@@ -6,13 +6,17 @@ use App\Enums\ErrorCode;
 use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Profile\UploadProfileRequest;
+use App\Http\Resources\User\UserResource;
 use App\Jobs\UploadProfileJob;
 use App\Services\Auth\AuthService;
 use App\Utils\AuthorizeUtil;
 use App\Utils\AuthUtil;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
 {
@@ -101,6 +105,148 @@ class ProfileController extends Controller
             return response()->json([
                 "message" => "Error while getting my photo",
                 "error_code" => ErrorCode::InternalError->value,
+            ], 500);
+        }
+    }
+
+    /**
+     * Get user info
+     */
+    public function getUserInfo(Request $request)
+    {
+        try {
+            $userId = $request->attributes->get('userId');
+            $user = $request->user() ?: AuthService::getUserById($userId);
+
+            AuthUtil::checkUserIfNotExist($user);
+
+            $user->loadMissing('image');
+
+            return response()->json([
+                "userInfo" => new UserResource($user)
+            ], 200);
+        } catch (ApiException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            return response()->json([
+                'error'      => 'Error while getting user info',
+                'message'    => $e->getMessage(),
+                'error_code' => ErrorCode::InternalError->value,
+            ], 500);
+        }
+    }
+
+    public function changeName(Request $request)
+    {
+        $validated = $request->validate([
+            'firstName' => ['required', 'string', 'max:52'],
+            'lastName'  => ['required', 'string', 'max:52'],
+        ]);
+
+        try {
+            $userId = $request->attributes->get('userId');
+            $user = $request->user() ?: AuthService::getUserById($userId);
+
+            AuthUtil::checkUserIfNotExist($user);
+
+            $user->update([
+                'firstName' => $validated['firstName'],
+                'lastName' => $validated['lastName'],
+            ]);
+
+            AuthUtil::checkUserIfNotExist($user);
+
+            return response()->json([
+                "message" => "Profile name updated successfully",
+            ], 200);
+        } catch (ApiException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            return response()->json([
+                'error'      => 'Failed to update profile name',
+                'message'    => $e->getMessage(),
+                'error_code' => ErrorCode::InternalError->value,
+            ], 500);
+        }
+    }
+
+    public function changeEmail(Request $request)
+    {
+        $validated = $request->validate([
+            'email'     => ['required', 'string', 'email', 'max:52', Rule::unique('users', 'email')],
+        ]);
+
+        try {
+            $userId = $request->attributes->get('userId');
+            $user = $request->user() ?: AuthService::getUserById($userId);
+
+            AuthUtil::checkUserIfNotExist($user);
+
+            $existingEmail = AuthService::getUserByEmail($validated['email']);
+            if ($existingEmail) {
+                return response()->json([
+                    "message" => "Email already exists",
+                ], 409);
+            }
+
+            $user->update([
+                'email' => $validated['email'],
+            ]);
+
+            AuthUtil::checkUserIfNotExist($user);
+
+            return response()->json([
+                "message" => "Email updated successfully",
+            ], 200);
+        } catch (ApiException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            return response()->json([
+                'error'      => 'Failed to update profile email',
+                'message'    => $e->getMessage(),
+                'error_code' => ErrorCode::InternalError->value,
+            ], 500);
+        }
+    }
+
+    public function changePassword(Request $request)
+    {
+        $validated = $request->validate([
+            'currentPassword' => ['required', 'string', 'min:6'],
+            // 'newPassword'     => ['required', 'string', 'min:6', 'different:currentPassword'],
+            'newPassword'     => ['required', 'string', 'min:6'],
+            'confirmPassword' => ['required', 'same:newPassword'],
+        ]);
+
+        try {
+            $userId = $request->attributes->get('userId');
+            $user = $request->user() ?: AuthService::getUserById($userId);
+
+            AuthUtil::checkUserIfNotExist($user);
+
+            if (!Hash::check($validated['currentPassword'], $user->password)) {
+                return response()->json([
+                    'message' => 'Current password does not match.',
+                ], 422);
+            }
+
+            $user->update([
+                'password' => Hash::make($validated['newPassword']),
+                'last_change_password' => Carbon::now(),
+            ]);
+
+            AuthUtil::checkUserIfNotExist($user);
+
+            return response()->json([
+                "message" => "Successfully changed password",
+            ], 200);
+        } catch (ApiException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            return response()->json([
+                'error'      => 'Failed to update profile password',
+                'message'    => $e->getMessage(),
+                'error_code' => ErrorCode::InternalError->value,
             ], 500);
         }
     }

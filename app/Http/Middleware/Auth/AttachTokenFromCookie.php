@@ -3,7 +3,6 @@
 namespace App\Http\Middleware\Auth;
 
 use App\Enums\ErrorCode;
-use App\Models\User;
 use App\Utils\TokenUtil;
 use Closure;
 use Illuminate\Http\Request;
@@ -61,7 +60,7 @@ class AttachTokenFromCookie
         // Set user id to request
         $request->attributes->set('userId', $user->id);
         auth()->guard()->setUser($user);
-        $request->setUserResolver(fn () => $user);
+        $request->setUserResolver(fn() => $user);
 
         return $next($request);
     }
@@ -76,10 +75,10 @@ class AttachTokenFromCookie
             return $this->unauthenticatedResponse('You are not an authenticated user.');
         }
 
-        $user = User::where('random_token', $refreshToken)->first();
+        $user = $tokenModel->tokenable;
 
         if (!$user) {
-            return $this->unauthenticatedResponse('You are not an authenticated user.');
+            return $this->unauthenticatedResponse('User not found.');
         }
 
         // Revoke the old refresh token from Sanctum
@@ -92,15 +91,19 @@ class AttachTokenFromCookie
             'random_token' => $tokens['refresh_token'],
         ]);
 
-        // Bind user to request pipeline
+        // Bind user to Request Lifecycle
         $request->attributes->set('userId', $user->id);
         auth()->guard()->setUser($user);
-        $request->setUserResolver(fn () => $user);
+        $request->setUserResolver(fn() => $user);
 
+        // send response and set a new cookie.
         $response = $next($request);
 
-        $newAccessCookie  = TokenUtil::createAuthCookie('accessToken', $tokens['access_token'], 15); // 15 minutes
-        $newRefreshCookie = TokenUtil::createAuthCookie('refreshToken', $tokens['refresh_token'], 30 * 24 * 60); // 30 days
+        $accessMinutes = 15; // 15 minutes
+        $refreshMinutes = 30 * 24 * 60; // 30 days
+
+        $newAccessCookie = TokenUtil::createAuthCookie('accessToken', $tokens['access_token'], $accessMinutes);
+        $newRefreshCookie = TokenUtil::createAuthCookie('refreshToken', $tokens['refresh_token'], $refreshMinutes);
 
         return $response
             ->withCookie($newAccessCookie)

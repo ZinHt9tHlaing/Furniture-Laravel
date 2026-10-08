@@ -81,7 +81,7 @@ class TokenUtil
             value: $tokenValue, // token value
             minutes: $expireTime, // expires time
             path: '/', // cookie path
-            domain: null, // cookie domain
+            domain: config('session.domain'), // cookie domain from config/session.php
             secure: $isProduction, // Secure (only works on HTTPS)
             httpOnly: true, // HttpOnly (Cannot be used from JavaScript.)
             sameSite: $sameSite // SameSite (controls when cookies are sent with cross-site requests)

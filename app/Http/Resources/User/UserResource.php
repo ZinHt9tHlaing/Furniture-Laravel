@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources\User;
 
-use App\Http\Resources\Post\PostResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -30,16 +29,16 @@ class UserResource extends JsonResource
                     'order'     => $this->image->order,
                 ];
             }),
-            'posts' => $this->whenLoaded('posts', function () {
-                return PostResource::collection($this->posts);
-            }),
+            // 'posts' => $this->whenLoaded('posts', function () {
+            //     return PostResource::collection($this->posts);
+            // }),
             'status' => $this->status,
-            'error_login_count' => $this->error_login_count,
-            'last_login' => $this->last_login,
-            'random_token' => $this->random_token,
-            'last_change_password' => $this->last_change_password,
-            'created_at' => $this->created_at->format('Y-m-d H:i:s'),
-            'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
+            // 'error_login_count' => $this->error_login_count,
+            // 'last_login' => $this->last_login,
+            // 'random_token' => $this->random_token,
+            // 'last_change_password' => $this->last_change_password,
+            'created_at' => $this->created_at->format('Y-m-d'),
+            'updated_at' => $this->updated_at->format('Y-m-d'),
         ];
     }
 }

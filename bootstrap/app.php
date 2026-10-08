@@ -47,4 +47,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 "message" => $e->getMessage() ?? "Method not allowed",
             ], 405);
         });
+
+        // render json
+        $exceptions->shouldRenderJsonWhen(fn($request) => $request->is('api/*') || $request->expectsJson());
     })->create();
